@@ -12,16 +12,17 @@
 %%%% than sqrt(MismatchRatios{nNet} = Rref{nNet} ./ Ezsqr{nNet}); although
 %%%% the latter would be more mathematically appealing
 
-set(0,'DefaultFigureWindowStyle','docked');
+function [energyErrs, autoCorrErrs] = working(no_plots, NNets)
+
+% set(0,'DefaultFigureWindowStyle','docked');
 
 %%% Experiment basic setup
 randstate = 1; newNets = 1; newSystemScalings = 1;
-learnModel = 1;
 newData = 1;
 
 %%% System parameters
-NMultiplier = [1 1 1 1 1 ]; % length of this gives Nr of nets
-showNets = [1 3 length(NMultiplier)]; % which nets are to be diagnostic-plotted
+NMultiplier = ones(1, NNets); % length of this gives Nr of nets
+showNets = [1 length(NMultiplier)]; % which nets are to be diagnostic-plotted
 N = 50;  % network size
 M = 200;  % RF space size
 Nfb = 2; % number of feedbacks
@@ -88,7 +89,6 @@ if newNets
     specrad = max(abs(eig(GF)));
     FstarRaw = FRaw;
     GstarRaw = GstarRaw / specrad;
-    
 end
 
 % Scale raw weights and initialize weights
@@ -113,7 +113,7 @@ if newData
         b = baselineParams(2);
         c = baselineParams(3);
         d = baselineParams(4);
-        testPattProto = trainPatt;
+        testPattProto = trainPatt; 
         testPatt = trainPatt;
         for n = 3:L
             testPatt(n) = ...
@@ -151,8 +151,6 @@ if 0
 end
 
 %% 2-module modeling
-
-
 %% Compute Conceptor
 zCollector = zeros(M, learnLength );
 z = zeros(M, 1);
@@ -175,9 +173,6 @@ C{1} = R ./ (R + apertures(1)^(-2));
 for nNet = 2:NNets
     C{nNet} = C{1};
 end
-
-
-
 
 %% Learn Rref,  Wout, and collect r state plot data
 zCollector = zeros(M, learnLength );
@@ -225,7 +220,7 @@ for nNet = 1:NNets
     zs{nNet} = zeros(M,1);
     yAll{nNet} = zeros(Nfb,1);
 end
-for n = 1:washoutLength             % Just for the WASHOUT period
+for n = 1:washoutLength             % just the WASHOUT period
     rs{1} = tanh(G * zs{1} + Win * testPatt(1,n)... % For the first setup
         + Wfb * yAll{1} + bias);
     zs{1} = C{1} .* (F * rs{1});
@@ -271,7 +266,6 @@ for nNet = 1:NNets
     MismatchRatios{nNet} = (Rref ./ Ezsqr{nNet}).^mismatchExp;
 end
 
-
 %% Adapt forward through nets for COadaptLength
 shift = washoutLength + COinitLength;
 
@@ -284,7 +278,11 @@ for n = 1:COadaptLength
     % in the next two lines, the core adaptation is done, by re-shaping the
     % z vector with the help of the mismatch ratios which pull it toward
     % the reference z signal energy profile known from training
-    yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
+
+    zs{1} = MismatchRatios{1} .* zs{1};
+    yAll{1} = WoutAll * (zs{1});
+%    yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
+    
     % the following updates the estimate of Ezsqr and the mismatch ratio
     Ezsqr{1} = (1-LRR) * Ezsqr{1} + LRR * zs{1}.^2;
     MismatchRatios{1} = (Rref ./ Ezsqr{1}).^mismatchExp;
@@ -294,7 +292,11 @@ for n = 1:COadaptLength
             yAll{nNet-1}(end,1) +...
             Wfb * yAll{nNet} + bias);
         zs{nNet} = C{nNet} .* (F * rs{nNet});
-        yAll{nNet} = WoutAll * (MismatchRatios{nNet} .* zs{nNet});
+   
+        zs{nNet} = MismatchRatios{nNet} .* zs{nNet};
+        yAll{nNet} = WoutAll * (zs{nNet});
+%         yAll{nNet} = WoutAll * (MismatchRatios{nNet} .* zs{nNet});
+        
         Ezsqr{nNet} = (1-LRR) * Ezsqr{nNet} + LRR * zs{nNet}.^2;
         MismatchRatios{nNet} = (Rref ./ Ezsqr{nNet}).^mismatchExp;
     end
@@ -340,13 +342,36 @@ for nNet = 1:NNets
     autoCorry{nNet} = autocorr(yCollectortest{nNet}, maxLag);
 end
 
-engyErrs = zeros(1,NNets);
+energyErrs = zeros(1,NNets);
 for nNet = 1:NNets
-    engyErrs(1,nNet) = ...
+    energyErrs(1,nNet) = ...
         norm((Rref - Ezsqr{nNet}) / norm(Rref))^2;
 end
 
+%% Calculations
+
+testNRMSEs = zeros(1,NNets);
+autoCorrErrs = zeros(1,NNets);
+for nNet = 1:NNets
+    testNRMSEs(nNet) = ytestNRMSE{nNet};
+    autoCorrErrs(nNet) = ...
+        norm((autoCorrP - autoCorry{nNet}) / norm(autoCorrP) )^2 ;
+end
+
+disp('***************************');
+fprintf('raw NRMSE = %0.3g\n',  rawNRMSE);
+fprintf('meanabs Wout = %0.3g\n',  mean(abs(Wout)));
+fprintf('train NRMSEs = %0.3g\n', ytrainNRMSE);
+disp(['test  NRMSEs = ' num2str(testNRMSEs, ' %0.3g')]);
+disp(['energyErrs = ' num2str(energyErrs, ' %0.3g')]);
+disp(['autoCorrErrs = ' num2str(autoCorrErrs, ' %0.3g')]);
+
 %% Plots
+
+if no_plots == 1
+    return
+end
+
 % Energy Ratios
 for nNet = showNets
     figNr = figNr + 1;
@@ -408,30 +433,11 @@ for nNet = showNets
     title(sprintf('y (%g) test out vs target (r)', nNet));
 end
 
-
-%%
-
-testNRMSEs = zeros(1,NNets);
-autoCorrErrs = zeros(1,NNets);
-for nNet = 1:NNets
-    testNRMSEs(nNet) = ytestNRMSE{nNet};
-    autoCorrErrs(nNet) = ...
-        norm((autoCorrP - autoCorry{nNet}) / norm(autoCorrP) )^2 ;
-end
-
+% Energy error and autocorr error plot
 figNr = figNr + 1;
 figure(figNr); clf;
 hold on;
-plot(log10(engyErrs),'bx-', 'LineWidth',2);
+plot(log10(energyErrs),'bx-', 'LineWidth',2);
 plot(log10(autoCorrErrs),'gx-', 'LineWidth',2);
 hold off;
-title('log10 engyErrs(b) autoCErrs(g)');
-
-
-disp('***************************');
-disp(sprintf('raw NRMSE = %0.3g',  rawNRMSE));
-disp(sprintf('meanabs Wout = %0.3g',  mean(abs(Wout))));
-disp(sprintf('train NRMSEs = 0.3g', ytrainNRMSE));
-disp(['test  NRMSEs = ' num2str(testNRMSEs, ' %0.3g')]);
-disp(['engyErrs = ' num2str(engyErrs, ' %0.3g')]);
-disp(['autoCorrErrs = ' num2str(autoCorrErrs, ' %0.3g')]);
+title('log10 energyErrs(b) autoCErrs(g)');
