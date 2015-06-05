@@ -14,7 +14,7 @@
 
 function [energyErrs, autoCorrErrs] = working(no_plots, NNets)
 
-% set(0,'DefaultFigureWindowStyle','docked');
+set(0,'DefaultFigureWindowStyle','docked');
 
 %%% Experiment basic setup
 randstate = 1; newNets = 1; newSystemScalings = 1;
@@ -22,7 +22,8 @@ newData = 1;
 
 %%% System parameters
 NMultiplier = ones(1, NNets); % length of this gives Nr of nets
-showNets = [1 length(NMultiplier)]; % which nets are to be diagnostic-plotted
+% showNets = [1 length(NMultiplier)]; % which nets are to be diagnostic-plotted
+showNets = [1]; % which nets are to be diagnostic-plotted
 N = 50;  % network size
 M = 200;  % RF space size
 Nfb = 2; % number of feedbacks
@@ -326,7 +327,7 @@ for n = 1:testLength
         testPattProto(1,n + shift);
     uCollectortest(:,n) = u;
 end
-
+NNets=1; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Calculate errors
 for nNet = 1:NNets
     ytestNRMSE{nNet} = nrmse(yCollectortest{nNet}, ...

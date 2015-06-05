@@ -22,13 +22,13 @@ newData = 1;
 
 %%% System parameters
 NMultiplier = ones(1, NNets); % length of this gives Nr of nets
-showNets = [1 length(NMultiplier)]; % which nets are to be diagnostic-plotted
+showNets = [1]; % which nets are to be diagnostic-plotted
 N = 50;  % network size
 M = 200;  % RF space size
 Nfb = 2; % number of feedbacks
 SR = 1 ;  % spectral radius
 WinScaling = .4 ;
-WfbScaling = 0. ;
+WfbScaling = 0 ;
 BiasScaling = 0. ;
 
 %%% learning controls
@@ -40,7 +40,8 @@ testLength = 1000;
 TychWouts = 0.05 * NMultiplier; % regularizers for Wout
 LRR = 0.005; % leaking rate for R estimation
 % set aperture1 = Inf if no conceptors are to be inserted
-apertures = Inf * NMultiplier;
+% apertures = Inf * NMultiplier;
+apertures = 10 * NMultiplier;
 
 mismatchExp = 1; % a value of 1/2 would be mathematically indicated
 % larger, over-compensating values work better
@@ -225,13 +226,24 @@ for n = 1:washoutLength             % just the WASHOUT period
         + Wfb * yAll{1} + bias);
     zs{1} = C{1} .* (F * rs{1});
     yAll{1} = WoutAll * zs{1};
-    for nNet = 2:NNets                              % For subsequent cascades
-        rs{nNet} = tanh(G * zs{nNet} + ...
-            Win * yAll{nNet-1}(end,1) + ...
-            Wfb * yAll{nNet} + bias);
-        zs{nNet} = C{nNet} .* (F * rs{nNet});
-        yAll{nNet} = WoutAll * zs{nNet};
+
+    % Instead of having different reservoirs in a cascade,
+    % we try to pass the signal within the same rfs
+    % for now, I have let NNets represent the no. of cycles
+    
+    for iteration = 2:NNets
+        rs{1} = tanh(G * zs{1} + Win * yAll{1}(end, 1) + bias);
+        zs{1} = C{1} .* (F * rs{1});
+        yAll{1} = WoutAll * zs{1};
     end
+    
+%     for nNet = 2:NNets                              % For subsequent cascades
+%         rs{nNet} = tanh(G * zs{nNet} + ...
+%             Win * yAll{nNet-1}(end,1) + ...
+%             Wfb * yAll{nNet} + bias);
+%         zs{nNet} = C{nNet} .* (F * rs{nNet});
+%         yAll{nNet} = WoutAll * zs{nNet};
+%     end
 end
 % Initialize the average (expected) signal energy vector E[z.^2], called
 % Ezsqr, for all nets in the cascade,
@@ -248,23 +260,31 @@ for n = 1:COinitLength
         + Wfb * yAll{1} + bias);
     zs{1} = C{1} .* (F * rs{1});
     yAll{1} = WoutAll * zs{1};
-    zColl{1}(:,n) = zs{1};
-    for nNet = 2:NNets
-        rs{nNet} = tanh(G * zs{nNet} + ...
-            Win * yAll{nNet-1}(end,1) + ...
-            Wfb * yAll{nNet} + bias);
-        zs{nNet} = C{nNet} .* (F * rs{nNet});
-        yAll{nNet} = WoutAll * zs{nNet};
-        zColl{nNet}(:,n) = zs{nNet};
+    
+    for iteration = 2:NNets
+        rs{1} = tanh(G * zs{1} + Win * yAll{1}(end, 1) + bias);
+        zs{1} = C{1} .* (F * rs{1});
+        yAll{1} = WoutAll * zs{1};
     end
+    
+    zColl{1}(:,n) = zs{1};
+%     for nNet = 2:NNets
+%         rs{nNet} = tanh(G * zs{nNet} + ...
+%             Win * yAll{nNet-1}(end,1) + ...
+%             Wfb * yAll{nNet} + bias);
+%         zs{nNet} = C{nNet} .* (F * rs{nNet});
+%         yAll{nNet} = WoutAll * zs{nNet};
+%         zColl{nNet}(:,n) = zs{nNet};
+%     end
 end
-for nNet = 1:NNets
+% for nNet = 1:NNets
+nNet = 1;
     Ezsqr{nNet} = diag(zColl{nNet} * zColl{nNet}') / COinitLength;
     % the mismatch ratios will function as the "ERROR" term that is used to pull
     % the actual signal energies of the z vectors toward the reference z
     % vectors known from the "clean" training input
     MismatchRatios{nNet} = (Rref ./ Ezsqr{nNet}).^mismatchExp;
-end
+% end
 
 %% Adapt forward through nets for COadaptLength
 shift = washoutLength + COinitLength;
@@ -279,27 +299,38 @@ for n = 1:COadaptLength
     % z vector with the help of the mismatch ratios which pull it toward
     % the reference z signal energy profile known from training
 
-    zs{1} = MismatchRatios{1} .* zs{1};
+%     zs{1} = MismatchRatios{1} .* zs{1}; % TRY HERE
     yAll{1} = WoutAll * (zs{1});
 %    yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
     
     % the following updates the estimate of Ezsqr and the mismatch ratio
+
+    for iteration = 2:NNets
+        rs{1} = tanh(G * zs{1} + Win * yAll{1}(end, 1) + bias);
+        zs{1} = C{1} .* (F * rs{1});
+        yAll{1} = WoutAll * zs{1};
+    end
+    
+    % Keeping the scaling out of the loop!
+    zs{1} = MismatchRatios{1} .* zs{1};
+    yAll{1} = WoutAll * zs{1};
+    
     Ezsqr{1} = (1-LRR) * Ezsqr{1} + LRR * zs{1}.^2;
     MismatchRatios{1} = (Rref ./ Ezsqr{1}).^mismatchExp;
-    for nNet = 2:NNets
-        rs{nNet} = tanh(G * zs{nNet} + ...
-            Win * ...
-            yAll{nNet-1}(end,1) +...
-            Wfb * yAll{nNet} + bias);
-        zs{nNet} = C{nNet} .* (F * rs{nNet});
-   
-        zs{nNet} = MismatchRatios{nNet} .* zs{nNet};
-        yAll{nNet} = WoutAll * (zs{nNet});
-%         yAll{nNet} = WoutAll * (MismatchRatios{nNet} .* zs{nNet});
-        
-        Ezsqr{nNet} = (1-LRR) * Ezsqr{nNet} + LRR * zs{nNet}.^2;
-        MismatchRatios{nNet} = (Rref ./ Ezsqr{nNet}).^mismatchExp;
-    end
+%     for nNet = 2:NNets
+%         rs{nNet} = tanh(G * zs{nNet} + ...
+%             Win * ...
+%             yAll{nNet-1}(end,1) +...
+%             Wfb * yAll{nNet} + bias);
+%         zs{nNet} = C{nNet} .* (F * rs{nNet});
+%    
+%         zs{nNet} = MismatchRatios{nNet} .* zs{nNet};
+%         yAll{nNet} = WoutAll * (zs{nNet});
+% %         yAll{nNet} = WoutAll * (MismatchRatios{nNet} .* zs{nNet});
+%         
+%         Ezsqr{nNet} = (1-LRR) * Ezsqr{nNet} + LRR * zs{nNet}.^2;
+%         MismatchRatios{nNet} = (Rref ./ Ezsqr{nNet}).^mismatchExp;
+%     end
 end
 
 %% Finally, stop adapting, stay in the last adapted configuaration
@@ -310,17 +341,24 @@ for n = 1:testLength
     rs{1} = tanh(G * zs{1} + Win * ...
         u + Wfb * yAll{1} + bias);
     zs{1} = C{1} .* (F * rs{1});
-    yAll{1} = WoutAll * (zs{1});
-    yCollectortest{1}(:,n) = yAll{1}(end,1);
-    for nNet = 2:NNets
-        rs{nNet} = tanh(G * zs{nNet} + ...
-            Win * ...
-            yAll{nNet-1}(end,1)  +...
-            Wfb * yAll{nNet} + bias);
-        zs{nNet} = C{nNet} .* (F * rs{nNet});
-        yAll{nNet} = WoutAll * (zs{nNet});
-        yCollectortest{nNet}(:,n) = yAll{nNet}(end,1);
+    yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
+    
+    for iteration = 2:NNets
+        rs{1} = tanh(G * zs{1} + Win * yAll{1}(end, 1) + bias);
+        zs{1} = C{1} .* (F * rs{1});
+        yAll{1} = WoutAll * (zs{1});
     end
+    
+    yCollectortest{1}(:,n) = yAll{1}(end,1);
+%     for nNet = 2:NNets
+%         rs{nNet} = tanh(G * zs{nNet} + ...
+%             Win * ...
+%             yAll{nNet-1}(end,1)  +...
+%             Wfb * yAll{nNet} + bias);
+%         zs{nNet} = C{nNet} .* (F * rs{nNet});
+%         yAll{nNet} = WoutAll * (zs{nNet});
+%         yCollectortest{nNet}(:,n) = yAll{nNet}(end,1);
+%     end
     
     pCollectortest(:,n) = ...
         testPattProto(1,n + shift);
@@ -328,6 +366,7 @@ for n = 1:testLength
 end
 
 % Calculate errors
+NNets = 1; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LOOK HERE! :P
 for nNet = 1:NNets
     ytestNRMSE{nNet} = nrmse(yCollectortest{nNet}, ...
         pCollectortest);
