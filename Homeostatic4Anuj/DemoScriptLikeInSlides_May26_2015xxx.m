@@ -275,6 +275,7 @@ end
 %% Adapt forward through nets for COadaptLength
 shift = washoutLength + COinitLength;
 
+y_co_adapt = zeros(1, COadaptLength);
 % plotInd = 0;
 for n = 1:COadaptLength
     rs{1} = tanh(G * zs{1} + Win * ...
@@ -298,7 +299,16 @@ for n = 1:COadaptLength
         Ezsqr{nNet} = (1-LRR) * Ezsqr{nNet} + LRR * zs{nNet}.^2;
         MismatchRatios{nNet} = (Rref ./ Ezsqr{nNet}).^mismatchExp;
     end
+    y_co_adapt(1, n) = yAll{3}(end, 1);
 end
+
+figNr = figNr + 1;
+figure(figNr); clf;
+hold on;
+plot(y_co_adapt(end - 50: end), 'b', 'LineWidth', 1.5);
+plot(trainPatt(shift + COadaptLength - 50 : shift+COadaptLength), 'r', 'LineWidth', 1.5);
+title('y during COadapt vs trainPatt (red)');
+hold off;
 
 %% Finally, stop adapting, stay in the last adapted configuaration
 % and collect data for plotting and error diagnostics
@@ -347,18 +357,18 @@ for nNet = 1:NNets
 end
 
 %% Plots
-% Energy Ratios
-for nNet = showNets
-    figNr = figNr + 1;
-    figure(figNr); clf;
-    hold on;
-    plot(EngyRatios{nNet});
-    title(sprintf('Energy ratios (unsorted) in %g', nNet));
-%     plot(sort(EngyRatios{nNet}, 'descend'), '.');
-    hold off;
-%     title(sprintf('Energy ratios in %g', nNet));
-    
-end
+% % Energy Ratios
+% for nNet = showNets
+%     figNr = figNr + 1;
+%     figure(figNr); clf;
+%     hold on;
+%     plot(EngyRatios{nNet});
+%     title(sprintf('Energy ratios (unsorted) in %g', nNet));
+% %     plot(sort(EngyRatios{nNet}, 'descend'), '.');
+%     hold off;
+% %     title(sprintf('Energy ratios in %g', nNet));
+%     
+% end
 
 % Autocorrelations
 for nNet = showNets

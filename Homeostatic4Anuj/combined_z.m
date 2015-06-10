@@ -22,7 +22,9 @@ newData = 1;
 
 %%% System parameters
 NMultiplier = ones(1, NNets); % length of this gives Nr of nets
+
 showNets = [1]; % which nets are to be diagnostic-plotted
+
 N = 50;  % network size
 M = 200;  % RF space size
 Nfb = 2; % number of feedbacks
@@ -267,7 +269,7 @@ for n = 1:COinitLength
     zs{1} = C{1} .* (F * rs{1});
     yAll{1} = WoutAll * zs{1};
     
-    for iteration = 2:NNets
+    for iteration = 2:NNets+1
         rs{1} = tanh(G_fil * zs{1} + Win * yAll{1}(end, 1) + bias);
         zs{1} = C{1} .* (F * rs{1});
         yAll{1} = WoutAll * zs{1};
@@ -295,6 +297,8 @@ nNet = 1;
 %% Adapt forward through nets for COadaptLength
 shift = washoutLength + COinitLength;
 
+y_co_adapt = zeros(1, COadaptLength);
+
 % plotInd = 0;
 for n = 1:COadaptLength
     rs{1} = tanh(G * zs{1} + Win * ...
@@ -321,6 +325,8 @@ for n = 1:COadaptLength
     zs{1} = MismatchRatios{1} .* zs{1};
     yAll{1} = WoutAll * zs{1};
     
+    y_co_adapt(1, n) = yAll{1}(end, 1);
+    
     Ezsqr{1} = (1-LRR) * Ezsqr{1} + LRR * zs{1}.^2;
     MismatchRatios{1} = (Rref ./ Ezsqr{1}).^mismatchExp;
 %     for nNet = 2:NNets
@@ -339,6 +345,13 @@ for n = 1:COadaptLength
 %     end
 end
 
+figNr = figNr + 1;
+figure(figNr); clf;
+hold on;
+plot(y_co_adapt(end - 50: end), 'b', 'LineWidth', 1.5);
+plot(trainPatt(shift + COadaptLength - 50 : shift+COadaptLength), 'r', 'LineWidth', 1.5);
+hold off;
+
 %% Finally, stop adapting, stay in the last adapted configuaration
 % and collect data for plotting and error diagnostics
 shift = washoutLength + COinitLength + COadaptLength;
@@ -352,7 +365,8 @@ for n = 1:testLength
     for iteration = 2:NNets
         rs{1} = tanh(G_fil * zs{1} + Win * yAll{1}(end, 1) + bias);
         zs{1} = C{1} .* (F * rs{1});
-        yAll{1} = WoutAll * (zs{1});
+        yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
+%         yAll{1} = WoutAll * zs{1};
     end
     
     yCollectortest{1}(:,n) = yAll{1}(end,1);
@@ -417,18 +431,18 @@ if no_plots == 1
     return
 end
 
-% Energy Ratios
-for nNet = showNets
-    figNr = figNr + 1;
-    figure(figNr); clf;
-    hold on;
-    plot(EngyRatios{nNet});
-    title(sprintf('Energy ratios (unsorted) in %g', nNet));
-%     plot(sort(EngyRatios{nNet}, 'descend'), '.');
-    hold off;
-%     title(sprintf('Energy ratios in %g', nNet));
-    
-end
+% % Energy Ratios
+% for nNet = showNets
+%     figNr = figNr + 1;
+%     figure(figNr); clf;
+%     hold on;
+%     plot(EngyRatios{nNet});
+%     title(sprintf('Energy ratios (unsorted) in %g', nNet));
+% %     plot(sort(EngyRatios{nNet}, 'descend'), '.');
+%     hold off;
+% %     title(sprintf('Energy ratios in %g', nNet));
+%     
+% end
 
 % Autocorrelations
 for nNet = showNets
