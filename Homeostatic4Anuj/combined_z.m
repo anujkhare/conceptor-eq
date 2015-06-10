@@ -269,7 +269,7 @@ for n = 1:COinitLength
     zs{1} = C{1} .* (F * rs{1});
     yAll{1} = WoutAll * zs{1};
     
-    for iteration = 2:NNets+1
+    for iteration = 2:NNets
         rs{1} = tanh(G_fil * zs{1} + Win * yAll{1}(end, 1) + bias);
         zs{1} = C{1} .* (F * rs{1});
         yAll{1} = WoutAll * zs{1};
@@ -299,7 +299,6 @@ shift = washoutLength + COinitLength;
 
 y_co_adapt = zeros(1, COadaptLength);
 
-% plotInd = 0;
 for n = 1:COadaptLength
     rs{1} = tanh(G * zs{1} + Win * ...
         testPatt(1,n+shift) ...
@@ -315,7 +314,7 @@ for n = 1:COadaptLength
     
     % the following updates the estimate of Ezsqr and the mismatch ratio
 
-    for iteration = 2:NNets
+    for iteration = 2:NNets + 1
         rs{1} = tanh(G_fil * zs{1} + Win * yAll{1}(end, 1) + bias);
         zs{1} = C{1} .* (F * rs{1});
         yAll{1} = WoutAll * zs{1};

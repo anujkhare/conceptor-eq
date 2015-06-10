@@ -23,7 +23,7 @@ newData = 1;
 %%% System parameters
 NMultiplier = ones(1, NNets); % length of this gives Nr of nets
 % showNets = [1 length(NMultiplier)]; % which nets are to be diagnostic-plotted
-showNets = [1]; % which nets are to be diagnostic-plotted
+showNets = [1 2 NNets]; % which nets are to be diagnostic-plotted
 N = 50;  % network size
 M = 200;  % RF space size
 Nfb = 2; % number of feedbacks
@@ -270,6 +270,7 @@ end
 %% Adapt forward through nets for COadaptLength
 shift = washoutLength + COinitLength;
 
+y_co_adapt = zeros(1, COadaptLength);
 % plotInd = 0;
 for n = 1:COadaptLength
     rs{1} = tanh(G * zs{1} + Win * ...
@@ -280,9 +281,9 @@ for n = 1:COadaptLength
     % z vector with the help of the mismatch ratios which pull it toward
     % the reference z signal energy profile known from training
 
-    zs{1} = MismatchRatios{1} .* zs{1};
-    yAll{1} = WoutAll * (zs{1});
-%    yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
+%     zs{1} = MismatchRatios{1} .* zs{1};
+%     yAll{1} = WoutAll * (zs{1});
+   yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
     
     % the following updates the estimate of Ezsqr and the mismatch ratio
     Ezsqr{1} = (1-LRR) * Ezsqr{1} + LRR * zs{1}.^2;
@@ -301,7 +302,17 @@ for n = 1:COadaptLength
         Ezsqr{nNet} = (1-LRR) * Ezsqr{nNet} + LRR * zs{nNet}.^2;
         MismatchRatios{nNet} = (Rref ./ Ezsqr{nNet}).^mismatchExp;
     end
+    
+    y_co_adapt(1, n) = yAll{3}(end, 1);
 end
+
+figNr = figNr + 1;
+figure(figNr); clf;
+hold on;
+plot(y_co_adapt(end - 50: end), 'b', 'LineWidth', 1.5);
+plot(trainPatt(shift + COadaptLength - 50 : shift+COadaptLength), 'r', 'LineWidth', 1.5);
+title('y during COadapt vs trainPatt (red)');
+hold off;
 
 %% Finally, stop adapting, stay in the last adapted configuaration
 % and collect data for plotting and error diagnostics
@@ -327,7 +338,7 @@ for n = 1:testLength
         testPattProto(1,n + shift);
     uCollectortest(:,n) = u;
 end
-NNets=1; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % Calculate errors
 for nNet = 1:NNets
     ytestNRMSE{nNet} = nrmse(yCollectortest{nNet}, ...
@@ -374,17 +385,17 @@ if no_plots == 1
 end
 
 % Energy Ratios
-for nNet = showNets
-    figNr = figNr + 1;
-    figure(figNr); clf;
-    hold on;
-    plot(EngyRatios{nNet});
-    title(sprintf('Energy ratios (unsorted) in %g', nNet));
-%     plot(sort(EngyRatios{nNet}, 'descend'), '.');
-    hold off;
-%     title(sprintf('Energy ratios in %g', nNet));
-    
-end
+% for nNet = showNets
+%     figNr = figNr + 1;
+%     figure(figNr); clf;
+%     hold on;
+%     plot(EngyRatios{nNet});
+%     title(sprintf('Energy ratios (unsorted) in %g', nNet));
+% %     plot(sort(EngyRatios{nNet}, 'descend'), '.');
+%     hold off;
+% %     title(sprintf('Energy ratios in %g', nNet));
+%     
+% end
 
 % Autocorrelations
 for nNet = showNets
