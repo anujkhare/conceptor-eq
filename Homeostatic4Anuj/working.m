@@ -295,9 +295,9 @@ for n = 1:COadaptLength
             Wfb * yAll{nNet} + bias);
         zs{nNet} = C{nNet} .* (F * rs{nNet});
    
-        zs{nNet} = MismatchRatios{nNet} .* zs{nNet};
-        yAll{nNet} = WoutAll * (zs{nNet});
-%         yAll{nNet} = WoutAll * (MismatchRatios{nNet} .* zs{nNet});
+%         zs{nNet} = MismatchRatios{nNet} .* zs{nNet};
+%         yAll{nNet} = WoutAll * (zs{nNet});
+`        yAll{nNet} = WoutAll * (MismatchRatios{nNet} .* zs{nNet});
         
         Ezsqr{nNet} = (1-LRR) * Ezsqr{nNet} + LRR * zs{nNet}.^2;
         MismatchRatios{nNet} = (Rref ./ Ezsqr{nNet}).^mismatchExp;

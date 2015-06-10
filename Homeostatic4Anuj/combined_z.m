@@ -217,6 +217,7 @@ g_fil_nrmse = mean(nrmse(G*z_t_1, G_fil * z_t));
 fprintf('G_fil nrmse = %0.3g\n', g_fil_nrmse);
 
 %% Testing
+% G_fil = G;
 for nNet = 1:NNets
     yCollectortest{nNet} = zeros(1, testLength );   % Test Output from each net
     MismatchRatiosTest{nNet} = zeros(M);            % Test MR for each net
@@ -230,6 +231,7 @@ for nNet = 1:NNets
     yAll{nNet} = zeros(Nfb,1);
 end
 for n = 1:washoutLength             % just the WASHOUT period
+    z_old = zs{1};
     rs{1} = tanh(G * zs{1} + Win * testPatt(1,n)... % For the first setup
         + Wfb * yAll{1} + bias);
     zs{1} = C{1} .* (F * rs{1});
@@ -240,7 +242,7 @@ for n = 1:washoutLength             % just the WASHOUT period
     % for now, I have let NNets represent the no. of cycles
     
     for iteration = 2:NNets
-        rs{1} = tanh(G_fil * zs{1} + Win * yAll{1}(end, 1) + bias);
+        rs{1} = tanh(G * z_old + Win * yAll{1}(end, 1) + bias);
         zs{1} = C{1} .* (F * rs{1});
         yAll{1} = WoutAll * zs{1};
     end
@@ -264,13 +266,14 @@ for nNet = 1:NNets
 end
 
 for n = 1:COinitLength
+    z_old = zs{1};
     rs{1} = tanh(G * zs{1} + Win * testPatt(1,n+shift)...
         + Wfb * yAll{1} + bias);
     zs{1} = C{1} .* (F * rs{1});
     yAll{1} = WoutAll * zs{1};
     
     for iteration = 2:NNets
-        rs{1} = tanh(G_fil * zs{1} + Win * yAll{1}(end, 1) + bias);
+        rs{1} = tanh(G * z_old + Win * yAll{1}(end, 1) + bias);
         zs{1} = C{1} .* (F * rs{1});
         yAll{1} = WoutAll * zs{1};
     end
@@ -300,6 +303,7 @@ shift = washoutLength + COinitLength;
 y_co_adapt = zeros(1, COadaptLength);
 
 for n = 1:COadaptLength
+    z_old = zs{1};
     rs{1} = tanh(G * zs{1} + Win * ...
         testPatt(1,n+shift) ...
         + Wfb * yAll{1} + bias);
@@ -314,9 +318,12 @@ for n = 1:COadaptLength
     
     % the following updates the estimate of Ezsqr and the mismatch ratio
 
-    for iteration = 2:NNets + 1
-        rs{1} = tanh(G_fil * zs{1} + Win * yAll{1}(end, 1) + bias);
+    for iteration = 2:NNets
+%         rs{1} = tanh(G_fil * zs{1} + Win * yAll{1}(end, 1) + bias);
+%         rs{1} = tanh(G*((z_old + G_fil * zs{1}) /2 ) + Win * yAll{1}(end, 1) + bias);
+        rs{1} = tanh(G*(z_old) + Win * yAll{1}(end, 1) + bias);
         zs{1} = C{1} .* (F * rs{1});
+%         z_old = zs{1};      % DO SOMETHING FOR z_old and MMR
         yAll{1} = WoutAll * zs{1};
     end
     
@@ -355,19 +362,25 @@ hold off;
 % and collect data for plotting and error diagnostics
 shift = washoutLength + COinitLength + COadaptLength;
 for n = 1:testLength
+    z_old = zs{1};
     u = testPatt(1,n+shift);
     rs{1} = tanh(G * zs{1} + Win * ...
         u + Wfb * yAll{1} + bias);
     zs{1} = C{1} .* (F * rs{1});
-    yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
+%     yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
+    yAll{1} = WoutAll * zs{1};
     
     for iteration = 2:NNets
-        rs{1} = tanh(G_fil * zs{1} + Win * yAll{1}(end, 1) + bias);
+%         rs{1} = tanh(G_fil * zs{1} + Win * yAll{1}(end, 1) + bias);
+%         rs{1} = tanh(G*((z_old + G_fil * zs{1}) /2 ) + Win * yAll{1}(end, 1) + bias);
+        rs{1} = tanh(G*(z_old) + Win * yAll{1}(end, 1) + bias);
         zs{1} = C{1} .* (F * rs{1});
-        yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
-%         yAll{1} = WoutAll * zs{1};
+%         yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
+        yAll{1} = WoutAll * zs{1};
+%         z_old = zs{1};
     end
     
+    yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
     yCollectortest{1}(:,n) = yAll{1}(end,1);
 %     for nNet = 2:NNets
 %         rs{nNet} = tanh(G * zs{nNet} + ...
