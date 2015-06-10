@@ -12,6 +12,11 @@
 %%%% than sqrt(MismatchRatios{nNet} = Rref{nNet} ./ Ezsqr{nNet}); although
 %%%% the latter would be more mathematically appealing
 
+%% Notes:
+% Single z,
+% Single z, but also train the G~ weights
+
+
 function [energyErrs, autoCorrErrs] = working(no_plots, NNets)
 
 set(0,'DefaultFigureWindowStyle','docked');

@@ -20,7 +20,7 @@ learnModel = 1;
 newData = 1;
 
 %%% System parameters
-NMultiplier = [1 1 1 1 1 ]; % length of this gives Nr of nets
+NMultiplier = [1 1 1 1 1]; % length of this gives Nr of nets
 showNets = [1 3 length(NMultiplier)]; % which nets are to be diagnostic-plotted
 N = 50;  % network size
 M = 200;  % RF space size
@@ -284,7 +284,9 @@ for n = 1:COadaptLength
     % in the next two lines, the core adaptation is done, by re-shaping the
     % z vector with the help of the mismatch ratios which pull it toward
     % the reference z signal energy profile known from training
-    yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
+%     yAll{1} = WoutAll * (MismatchRatios{1} .* zs{nNet});
+    yAll{1} = WoutAll * ( zs{1});
+    
     % the following updates the estimate of Ezsqr and the mismatch ratio
     Ezsqr{1} = (1-LRR) * Ezsqr{1} + LRR * zs{1}.^2;
     MismatchRatios{1} = (Rref ./ Ezsqr{1}).^mismatchExp;
@@ -294,7 +296,8 @@ for n = 1:COadaptLength
             yAll{nNet-1}(end,1) +...
             Wfb * yAll{nNet} + bias);
         zs{nNet} = C{nNet} .* (F * rs{nNet});
-        yAll{nNet} = WoutAll * (MismatchRatios{nNet} .* zs{nNet});
+%         yAll{nNet} = WoutAll * (MismatchRatios{nNet} .* zs{nNet});
+        yAll{nNet} = WoutAll * (zs{nNet});
         Ezsqr{nNet} = (1-LRR) * Ezsqr{nNet} + LRR * zs{nNet}.^2;
         MismatchRatios{nNet} = (Rref ./ Ezsqr{nNet}).^mismatchExp;
     end
@@ -308,7 +311,8 @@ for n = 1:testLength
     rs{1} = tanh(G * zs{1} + Win * ...
         u + Wfb * yAll{1} + bias);
     zs{1} = C{1} .* (F * rs{1});
-    yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
+%     yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
+    yAll{1} = WoutAll * zs{1};
     yCollectortest{1}(:,n) = yAll{1}(end,1);
     for nNet = 2:NNets
         rs{nNet} = tanh(G * zs{nNet} + ...
@@ -316,7 +320,8 @@ for n = 1:testLength
             yAll{nNet-1}(end,1)  +...
             Wfb * yAll{nNet} + bias);
         zs{nNet} = C{nNet} .* (F * rs{nNet});
-        yAll{nNet} = WoutAll * (MismatchRatios{nNet} .* zs{nNet});
+%         yAll{nNet} = WoutAll * (MismatchRatios{nNet} .* zs{nNet});
+        yAll{nNet} = WoutAll * zs{nNet};
         yCollectortest{nNet}(:,n) = yAll{nNet}(end,1);
     end
     
