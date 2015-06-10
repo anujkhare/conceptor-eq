@@ -151,8 +151,7 @@ if 0
     title('train pattern');
 end
 
-%% 2-module modeling
-%% Compute Conceptor
+%% 2-module modeling - Compute Conceptor
 zCollector = zeros(M, learnLength );
 z = zeros(M, 1);
 
@@ -208,6 +207,13 @@ WoutAll = (pinv(args * args' / learnLength + ...
 Wout = WoutAll(end,:);
 ytrainNRMSE = nrmse(Wout * args, targs(end,:));
 
+% Calculate the G_fil to 'hold' the system in a previous state
+z_t = zCollector(:, 2:end);     % z(t)
+z_t_1 = zCollector(:, 1:end-1); % z(t-1)
+G_fil = (pinv(z_t * z_t') * z_t * (G * z_t_1)')';  %G_fil * z(t)=G * z(t-1)
+g_fil_nrmse = mean(nrmse(G*z_t_1, G_fil * z_t));
+fprintf('G_fil nrmse = %0.3g\n', g_fil_nrmse);
+
 %% Testing
 for nNet = 1:NNets
     yCollectortest{nNet} = zeros(1, testLength );   % Test Output from each net
@@ -232,7 +238,7 @@ for n = 1:washoutLength             % just the WASHOUT period
     % for now, I have let NNets represent the no. of cycles
     
     for iteration = 2:NNets
-        rs{1} = tanh(G * zs{1} + Win * yAll{1}(end, 1) + bias);
+        rs{1} = tanh(G_fil * zs{1} + Win * yAll{1}(end, 1) + bias);
         zs{1} = C{1} .* (F * rs{1});
         yAll{1} = WoutAll * zs{1};
     end
@@ -262,7 +268,7 @@ for n = 1:COinitLength
     yAll{1} = WoutAll * zs{1};
     
     for iteration = 2:NNets
-        rs{1} = tanh(G * zs{1} + Win * yAll{1}(end, 1) + bias);
+        rs{1} = tanh(G_fil * zs{1} + Win * yAll{1}(end, 1) + bias);
         zs{1} = C{1} .* (F * rs{1});
         yAll{1} = WoutAll * zs{1};
     end
@@ -306,7 +312,7 @@ for n = 1:COadaptLength
     % the following updates the estimate of Ezsqr and the mismatch ratio
 
     for iteration = 2:NNets
-        rs{1} = tanh(G * zs{1} + Win * yAll{1}(end, 1) + bias);
+        rs{1} = tanh(G_fil * zs{1} + Win * yAll{1}(end, 1) + bias);
         zs{1} = C{1} .* (F * rs{1});
         yAll{1} = WoutAll * zs{1};
     end
@@ -344,7 +350,7 @@ for n = 1:testLength
     yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
     
     for iteration = 2:NNets
-        rs{1} = tanh(G * zs{1} + Win * yAll{1}(end, 1) + bias);
+        rs{1} = tanh(G_fil * zs{1} + Win * yAll{1}(end, 1) + bias);
         zs{1} = C{1} .* (F * rs{1});
         yAll{1} = WoutAll * (zs{1});
     end
