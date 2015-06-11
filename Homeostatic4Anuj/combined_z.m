@@ -216,6 +216,9 @@ G_fil = (pinv(z_t * z_t') * z_t * (G * z_t_1)')';  %G_fil * z(t)=G * z(t-1)
 g_fil_nrmse = mean(nrmse(G*z_t_1, G_fil * z_t));
 fprintf('G_fil nrmse = %0.3g\n', g_fil_nrmse);
 
+% Calculate GinvWin
+GinvWin = pinv(G'*G) * G' * Win;
+
 %% Testing
 % G_fil = G;
 for nNet = 1:NNets
@@ -231,8 +234,9 @@ for nNet = 1:NNets
     yAll{nNet} = zeros(Nfb,1);
 end
 for n = 1:washoutLength             % just the WASHOUT period
+    u = testPatt(1, n);
     z_old = zs{1};
-    rs{1} = tanh(G * zs{1} + Win * testPatt(1,n)... % For the first setup
+    rs{1} = tanh(G * zs{1} + Win * u... % For the first setup
         + Wfb * yAll{1} + bias);
     zs{1} = C{1} .* (F * rs{1});
     yAll{1} = WoutAll * zs{1};
@@ -244,6 +248,7 @@ for n = 1:washoutLength             % just the WASHOUT period
     for iteration = 2:NNets
         rs{1} = tanh(G * z_old + Win * yAll{1}(end, 1) + bias);
         zs{1} = C{1} .* (F * rs{1});
+        z_old = z_old + GinvWin * (yAll{1}(end, 1) - u);
         yAll{1} = WoutAll * zs{1};
     end
     
@@ -267,7 +272,8 @@ end
 
 for n = 1:COinitLength
     z_old = zs{1};
-    rs{1} = tanh(G * zs{1} + Win * testPatt(1,n+shift)...
+    u = testPatt(1,n+shift);
+    rs{1} = tanh(G * zs{1} + Win * u...
         + Wfb * yAll{1} + bias);
     zs{1} = C{1} .* (F * rs{1});
     yAll{1} = WoutAll * zs{1};
@@ -275,6 +281,7 @@ for n = 1:COinitLength
     for iteration = 2:NNets
         rs{1} = tanh(G * z_old + Win * yAll{1}(end, 1) + bias);
         zs{1} = C{1} .* (F * rs{1});
+        z_old = z_old + GinvWin * (yAll{1}(end, 1) - u);
         yAll{1} = WoutAll * zs{1};
     end
     
@@ -304,8 +311,9 @@ y_co_adapt = zeros(1, COadaptLength);
 
 for n = 1:COadaptLength
     z_old = zs{1};
+    u = testPatt(1, n+shift);
     rs{1} = tanh(G * zs{1} + Win * ...
-        testPatt(1,n+shift) ...
+        u ...
         + Wfb * yAll{1} + bias);
     zs{1} = C{1} .* (F * rs{1});
     % in the next two lines, the core adaptation is done, by re-shaping the
@@ -324,6 +332,7 @@ for n = 1:COadaptLength
         rs{1} = tanh(G*(z_old) + Win * yAll{1}(end, 1) + bias);
         zs{1} = C{1} .* (F * rs{1});
 %         z_old = zs{1};      % DO SOMETHING FOR z_old and MMR
+        z_old = z_old + GinvWin * (yAll{1}(end, 1) - u);
         yAll{1} = WoutAll * zs{1};
     end
     
@@ -376,6 +385,7 @@ for n = 1:testLength
         rs{1} = tanh(G*(z_old) + Win * yAll{1}(end, 1) + bias);
         zs{1} = C{1} .* (F * rs{1});
 %         yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
+        z_old = z_old + GinvWin * (yAll{1}(end, 1) - u);
         yAll{1} = WoutAll * zs{1};
 %         z_old = zs{1};
     end
