@@ -12,11 +12,12 @@
 %%%% than sqrt(MismatchRatios{nNet} = Rref{nNet} ./ Ezsqr{nNet}); although
 %%%% the latter would be more mathematically appealing
 
-function [energyErrs, autoCorrErrs] = combined_z(NNets, lrr)
+%%%% Works well with NNets=10 and lrr=0.01
+function [energyErrs, autoCorrErrs] = combined_z(NNets, lrr, no_plots)
 
-no_plots=0;
-
+% no_plots=0;
 set(0,'DefaultFigureWindowStyle','docked');
+figNr = 0;
 
 %%% Experiment basic setup
 randstate = 1; newNets = 1; newSystemScalings = 1;
@@ -142,19 +143,6 @@ if newData
     
 end
 
-figNr = 0;
-
-if 0
-    figNr = figNr + 1;
-    figure(figNr); clf;
-    hold on;
-    plot((1:signalPlotLength) + (p-1)*signalPlotLength, ...
-        trainPatt(1,end - signalPlotLength + 1:end));
-    
-    hold off;
-    title('train pattern');
-end
-
 %% 2-module modeling - Compute Conceptor
 zCollector = zeros(M, learnLength );
 z = zeros(M, 1);
@@ -210,13 +198,6 @@ WoutAll = (pinv(args * args' / learnLength + ...
     TychWouts(nNet) * eye(M)) * args * targs' / learnLength)' ;     % why??
 Wout = WoutAll(end,:);
 ytrainNRMSE = nrmse(Wout * args, targs(end,:));
-
-% Calculate the G_fil to 'hold' the system in a previous state
-z_t = zCollector(:, 2:end);     % z(t)
-z_t_1 = zCollector(:, 1:end-1); % z(t-1)
-G_fil = (pinv(z_t * z_t') * z_t * (G * z_t_1)')';  %G_fil * z(t)=G * z(t-1)
-g_fil_nrmse = mean(nrmse(G*z_t_1, G_fil * z_t));
-fprintf('G_fil nrmse = %0.3g\n', g_fil_nrmse);
 
 % Calculate GinvWin
 GinvWin = pinv(G'*G) * G' * Win;
@@ -280,6 +261,7 @@ for n = 1:COinitLength
         yAll{1} = WoutAll * zs{1};
 %         yAll{nNet} = WoutAll * zs{nNet};
 %         zColl{nNet}(:,n) = zs{nNet};
+%         z_old = zs{1};
     end
     
     zColl{1}(:,n) = zs{1};
@@ -334,31 +316,33 @@ for n = 1:COadaptLength
     amp_ratio_co(n) = abs(yAll{1}(end, 1) / testPatt(n+shift));
     if (amp_ratio_co(n) > 1)
         if (n>1950)
-                 disp(n);   list_co(end+1) = n;
+%                  disp(n);
+                 list_co(end+1) = n;
         end
     end
     Ezsqr{1} = (1-LRR) * Ezsqr{1} + LRR * zs{1}.^2;
     MismatchRatios{1} = (Rref ./ Ezsqr{1}).^mismatchExp;
 end
 
-figNr = figNr + 1;
-figure(figNr); clf;
-hold on;
-plot(y_co_adapt(end - 50: end), 'b', 'LineWidth', 1.5);
-plot(trainPatt(shift + COadaptLength - 50 : shift+COadaptLength), 'r', 'LineWidth', 1.5);
-plot(list_co - 1949, trainPatt(shift+ list_co), 'rx');
-plot(list_co - 1949, y_co_adapt(list_co), 'bx');
-title('y vs TrainPatt (red) during COadapt');
-hold off;
-fprintf('Mean diff in amps(coadapt): %f\n', mean(amp_ratio_co));
-figNr = figNr + 1;
-figure(figNr); clf;
-hold on;
-plot(amp_ratio_co(end-50:end));
-plot(list_co - 1949, amp_ratio_co(list_co), 'go');
-title('Amp ratio during COadapt');
-hold off;
-
+if no_plots==0
+    figNr = figNr + 1;
+    figure(figNr); clf;
+    hold on;
+    plot(y_co_adapt(end - 50: end), 'b', 'LineWidth', 1.5);
+    plot(trainPatt(shift + COadaptLength - 50 : shift+COadaptLength), 'r', 'LineWidth', 1.5);
+    plot(list_co - 1949, trainPatt(shift+ list_co), 'rx');
+    plot(list_co - 1949, y_co_adapt(list_co), 'bx');
+    title('y vs TrainPatt (red) during COadapt');
+    hold off;
+    fprintf('Mean diff in amps(coadapt): %f\n', mean(amp_ratio_co));
+    figNr = figNr + 1;
+    figure(figNr); clf;
+    hold on;
+    plot(amp_ratio_co(end-50:end));
+    plot(list_co - 1949, amp_ratio_co(list_co), 'go');
+    title('Amp ratio during COadapt');
+    hold off;
+end
 %% Finally, stop adapting, stay in the last adapted configuaration
 % and collect data for plotting and error diagnostics
 
@@ -395,13 +379,15 @@ for n = 1:testLength
     uCollectortest(:,n) = u;
 end
 
-fprintf('Mean diff in amps(test): %f\n', mean(amp_ratio_test));
-figNr = figNr + 1;
-figure(figNr); clf;
-hold on;
-plot(amp_ratio_test);
-title('Amp ratio during Test');
-hold off;
+if no_plots==0
+    fprintf('Mean diff in amps(test): %f\n', mean(amp_ratio_test));
+    figNr = figNr + 1;
+    figure(figNr); clf;
+    hold on;
+    plot(amp_ratio_test);
+    title('Amp ratio during Test');
+    hold off;
+end
 
 % Calculate errors
 NNets = 1; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LOOK HERE! :P
