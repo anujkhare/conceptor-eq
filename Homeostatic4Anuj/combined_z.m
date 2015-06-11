@@ -45,7 +45,7 @@ LRR = 0.005; % leaking rate for R estimation
 % apertures = Inf * NMultiplier;
 apertures = 10 * NMultiplier;
 
-mismatchExp = 1; % a value of 1/2 would be mathematically indicated
+mismatchExp = 0.0; % a value of 1/2 would be mathematically indicated
 % larger, over-compensating values work better
 
 % set filter function.
@@ -296,6 +296,8 @@ nNet = 1;
 shift = washoutLength + COinitLength;
 
 y_co_adapt = zeros(1, COadaptLength);
+amp_ratio_co = zeros(1, COadaptLength);
+list_co = [];
 
 for n = 1:COadaptLength
     z_old = zs{1};
@@ -323,11 +325,16 @@ for n = 1:COadaptLength
     end
     
     % Keeping the scaling out of the loop!
-    zs{1} = MismatchRatios{1} .* zs{1};
+%     zs{1} = MismatchRatios{1} .* zs{1};
     yAll{1} = WoutAll * zs{1};
     
     y_co_adapt(1, n) = yAll{1}(end, 1);
-    
+    amp_ratio_co(n) = abs(yAll{1}(end, 1) / trainPatt(n+shift));
+    if (amp_ratio_co(n) > 1)
+        if (n>1950)
+                 disp(n);   list_co(end+1) = n;
+        end
+    end
     Ezsqr{1} = (1-LRR) * Ezsqr{1} + LRR * zs{1}.^2;
     MismatchRatios{1} = (Rref ./ Ezsqr{1}).^mismatchExp;
 end
@@ -337,11 +344,24 @@ figure(figNr); clf;
 hold on;
 plot(y_co_adapt(end - 50: end), 'b', 'LineWidth', 1.5);
 plot(trainPatt(shift + COadaptLength - 50 : shift+COadaptLength), 'r', 'LineWidth', 1.5);
+plot(list_co - 1949, trainPatt(shift+ list_co), 'rx');
+plot(list_co - 1949, y_co_adapt(list_co), 'bx');
 title('y vs TrainPatt (red) during COadapt');
+hold off;
+fprintf('Mean diff in amps(coadapt): %f\n', mean(amp_ratio_co));
+figNr = figNr + 1;
+figure(figNr); clf;
+hold on;
+plot(amp_ratio_co(end-50:end));
+plot(list_co - 1949, amp_ratio_co(list_co), 'go');
+title('Amp ratio during COadapt');
 hold off;
 
 %% Finally, stop adapting, stay in the last adapted configuaration
 % and collect data for plotting and error diagnostics
+
+amp_ratio_test = zeros(1, testLength);
+
 shift = washoutLength + COinitLength + COadaptLength;
 for n = 1:testLength
     z_old = zs{1};
@@ -362,12 +382,24 @@ for n = 1:testLength
 %         z_old = zs{1};
     end
     
-    yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
+%     yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
+    yAll{1} = WoutAll * (zs{1});
+    
+    amp_ratio_test = abs(yAll{1}(end, 1) / trainPatt(n+shift));
+    
     yCollectortest{1}(:,n) = yAll{1}(end,1);    
     pCollectortest(:,n) = ...
         testPattProto(1,n + shift);
     uCollectortest(:,n) = u;
 end
+
+fprintf('Mean diff in amps(test): %f\n', mean(amp_ratio_test));
+figNr = figNr + 1;
+figure(figNr); clf;
+hold on;
+plot(amp_ratio_test);
+title('Amp ratio during Test');
+hold off;
 
 % Calculate errors
 NNets = 1; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LOOK HERE! :P
