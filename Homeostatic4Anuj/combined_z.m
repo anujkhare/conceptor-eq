@@ -12,7 +12,9 @@
 %%%% than sqrt(MismatchRatios{nNet} = Rref{nNet} ./ Ezsqr{nNet}); although
 %%%% the latter would be more mathematically appealing
 
-function [energyErrs, autoCorrErrs] = combined_z(no_plots, NNets)
+function [energyErrs, autoCorrErrs] = combined_z(NNets, lrr)
+
+no_plots=0;
 
 set(0,'DefaultFigureWindowStyle','docked');
 
@@ -40,12 +42,12 @@ COinitLength = 1000;
 COadaptLength = 2000;
 testLength = 1000;
 TychWouts = 0.05 * NMultiplier; % regularizers for Wout
-LRR = 0.005; % leaking rate for R estimation
+LRR = lrr; % leaking rate for R estimation
 % set aperture1 = Inf if no conceptors are to be inserted
 % apertures = Inf * NMultiplier;
-apertures = 10 * NMultiplier;
+apertures = Inf * NMultiplier;
 
-mismatchExp = 0.0; % a value of 1/2 would be mathematically indicated
+mismatchExp = 0.5; % a value of 1/2 would be mathematically indicated
 % larger, over-compensating values work better
 
 % set filter function.
@@ -312,7 +314,6 @@ for n = 1:COadaptLength
 
 %     zs{1} = MismatchRatios{1} .* zs{1}; % TRY HERE
     yAll{1} = WoutAll * (zs{1});
-%    yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
     
 % the following updates the estimate of Ezsqr and the mismatch ratio
 
@@ -326,10 +327,11 @@ for n = 1:COadaptLength
     
     % Keeping the scaling out of the loop!
 %     zs{1} = MismatchRatios{1} .* zs{1};
-    yAll{1} = WoutAll * zs{1};
+%     yAll{1} = WoutAll * zs{1};
+   yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
     
     y_co_adapt(1, n) = yAll{1}(end, 1);
-    amp_ratio_co(n) = abs(yAll{1}(end, 1) / trainPatt(n+shift));
+    amp_ratio_co(n) = abs(yAll{1}(end, 1) / testPatt(n+shift));
     if (amp_ratio_co(n) > 1)
         if (n>1950)
                  disp(n);   list_co(end+1) = n;
@@ -382,8 +384,8 @@ for n = 1:testLength
 %         z_old = zs{1};
     end
     
-%     yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
-    yAll{1} = WoutAll * (zs{1});
+    yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
+%     yAll{1} = WoutAll * (zs{1});
     
     amp_ratio_test = abs(yAll{1}(end, 1) / trainPatt(n+shift));
     

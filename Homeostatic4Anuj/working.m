@@ -297,7 +297,7 @@ for n = 1:COadaptLength
    
 %         zs{nNet} = MismatchRatios{nNet} .* zs{nNet};
 %         yAll{nNet} = WoutAll * (zs{nNet});
-`        yAll{nNet} = WoutAll * (MismatchRatios{nNet} .* zs{nNet});
+        yAll{nNet} = WoutAll * (MismatchRatios{nNet} .* zs{nNet});
         
         Ezsqr{nNet} = (1-LRR) * Ezsqr{nNet} + LRR * zs{nNet}.^2;
         MismatchRatios{nNet} = (Rref ./ Ezsqr{nNet}).^mismatchExp;
