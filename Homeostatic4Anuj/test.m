@@ -15,7 +15,7 @@
 % plot(lrr, autoCorrErrs, 'gx-');
 % hold off;
 
-NNets = 2:2:26;
+NNets = 2:2:16;
 lrr = 0.01;
 no_plots = 1;
 

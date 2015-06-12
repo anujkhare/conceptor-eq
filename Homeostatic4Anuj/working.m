@@ -384,19 +384,6 @@ if no_plots == 1
     return
 end
 
-% Energy Ratios
-% for nNet = showNets
-%     figNr = figNr + 1;
-%     figure(figNr); clf;
-%     hold on;
-%     plot(EngyRatios{nNet});
-%     title(sprintf('Energy ratios (unsorted) in %g', nNet));
-% %     plot(sort(EngyRatios{nNet}, 'descend'), '.');
-%     hold off;
-% %     title(sprintf('Energy ratios in %g', nNet));
-%     
-% end
-
 % Autocorrelations
 for nNet = showNets
     figNr = figNr + 1;
@@ -443,6 +430,19 @@ for nNet = showNets
     hold off;
     set(gca, 'YLim',[miny-0.2 maxy+0.2], 'XLim', [1 signalPlotLength]); % why?
     title(sprintf('y (%g) test out vs target (r)', nNet));
+end
+
+% Energy Ratios
+for nNet = showNets
+    figNr = figNr + 1;
+    figure(figNr); clf;
+    hold on;
+    plot(EngyRatios{nNet});
+    title(sprintf('Energy ratios (unsorted) in %g', nNet));
+%     plot(sort(EngyRatios{nNet}, 'descend'), '.');
+    hold off;
+%     title(sprintf('Energy ratios in %g', nNet));
+    
 end
 
 % Energy error and autocorr error plot

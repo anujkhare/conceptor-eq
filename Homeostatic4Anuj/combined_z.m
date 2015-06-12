@@ -16,7 +16,7 @@
 function [energyErrs, autoCorrErrs] = combined_z(NNets, lrr, no_plots)
 
 % no_plots=0;
-set(0,'DefaultFigureWindowStyle','docked');
+% set(0,'DefaultFigureWindowStyle','docked');
 figNr = 0;
 
 %%% Experiment basic setup
@@ -371,22 +371,12 @@ for n = 1:testLength
     yAll{1} = WoutAll * (MismatchRatios{1} .* zs{1});
 %     yAll{1} = WoutAll * (zs{1});
     
-    amp_ratio_test = abs(yAll{1}(end, 1) / trainPatt(n+shift));
+    amp_ratio_test(n) = abs(yAll{1}(end, 1) / trainPatt(n+shift));
     
     yCollectortest{1}(:,n) = yAll{1}(end,1);    
     pCollectortest(:,n) = ...
         testPattProto(1,n + shift);
     uCollectortest(:,n) = u;
-end
-
-if no_plots==0
-    fprintf('Mean diff in amps(test): %f\n', mean(amp_ratio_test));
-    figNr = figNr + 1;
-    figure(figNr); clf;
-    hold on;
-    plot(amp_ratio_test);
-    title('Amp ratio during Test');
-    hold off;
 end
 
 % Calculate errors
@@ -435,31 +425,6 @@ if no_plots == 1
     return
 end
 
-% % Energy Ratios
-% for nNet = showNets
-%     figNr = figNr + 1;
-%     figure(figNr); clf;
-%     hold on;
-%     plot(EngyRatios{nNet});
-%     title(sprintf('Energy ratios (unsorted) in %g', nNet));
-% %     plot(sort(EngyRatios{nNet}, 'descend'), '.');
-%     hold off;
-% %     title(sprintf('Energy ratios in %g', nNet));
-%     
-% end
-
-% Autocorrelations
-for nNet = showNets
-    figNr = figNr + 1;
-    figure(figNr); clf;
-    hold on;
-    plot(autoCorrP, 'r', 'LineWidth',2);
-    plot(autoCorry{nNet}, 'b', 'LineWidth',2);
-    hold off;
-    title(sprintf('Autocorrs in %g (r=orig)', nNet));
-    
-end
-
 % Signals
 maxy = -10; miny = 10;
 for nNet = 1:NNets
@@ -478,6 +443,7 @@ for nNet = 1:NNets
     miny = min(miny, min(effectives{nNet}));
     
 end
+
 for nNet = showNets
     figNr = figNr + 1;
     figure(figNr); clf;
@@ -496,11 +462,45 @@ for nNet = showNets
     title(sprintf('y (%g) test out vs target (r)', nNet));
 end
 
-% Energy error and autocorr error plot
+% Amp ratios during test
+fprintf('Mean diff in amps(test): %f\n', mean(amp_ratio_test));
 figNr = figNr + 1;
 figure(figNr); clf;
 hold on;
-plot(log10(energyErrs),'bx-', 'LineWidth',2);
-plot(log10(autoCorrErrs),'gx-', 'LineWidth',2);
+plot(amp_ratio_test(1, end - signalPlotLength + 1 : end));
+title('Amp ratio during Test');
 hold off;
-title('log10 energyErrs(b) autoCErrs(g)');
+
+% Autocorrelations
+for nNet = showNets
+    figNr = figNr + 1;
+    figure(figNr); clf;
+    hold on;
+    plot(autoCorrP, 'r', 'LineWidth',2);
+    plot(autoCorry{nNet}, 'b', 'LineWidth',2);
+    hold off;
+    title(sprintf('Autocorrs in %g (r=orig)', nNet));
+    
+end
+
+% Energy Ratios
+for nNet = showNets
+    figNr = figNr + 1;
+    figure(figNr); clf;
+    hold on;
+    plot(EngyRatios{nNet});
+    title(sprintf('Energy ratios (unsorted) in %g', nNet));
+%     plot(sort(EngyRatios{nNet}, 'descend'), '.');
+    hold off;
+%     title(sprintf('Energy ratios in %g', nNet));
+    
+end
+
+% % Energy error and autocorr error plot
+% figNr = figNr + 1;
+% figure(figNr); clf;
+% hold on;
+% plot(log10(energyErrs),'bx-', 'LineWidth',2);
+% plot(log10(autoCorrErrs),'gx-', 'LineWidth',2);
+% hold off;
+% title('log10 energyErrs(b) autoCErrs(g)');
