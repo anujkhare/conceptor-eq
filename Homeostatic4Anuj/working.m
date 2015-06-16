@@ -24,8 +24,8 @@ newData = 1;
 NMultiplier = ones(1, NNets); % length of this gives Nr of nets
 % showNets = [1 length(NMultiplier)]; % which nets are to be diagnostic-plotted
 showNets = [1 2 NNets]; % which nets are to be diagnostic-plotted
-N = 50;  % network size
-M = 200;  % RF space size
+N = 200;  % network size
+M = 800;  % RF space size
 Nfb = 2; % number of feedbacks
 SR = 1 ;  % spectral radius
 WinScaling = .4 ;
@@ -57,8 +57,7 @@ if dataType == 1
     filterWashout = 100;
     
     baselineParams = [2 -1 -2 0 ]; pattScaling = 1; pattShift = 1;
-    
-    
+   
 elseif dataType == 2
     Filter = @(y, a, b, c) a + b * (sign(y) * abs(y).^c);
     filterWashout = 100;
@@ -114,14 +113,29 @@ if newData
         b = baselineParams(2);
         c = baselineParams(3);
         d = baselineParams(4);
-        testPattProto = trainPatt; 
-        testPatt = trainPatt;
-        for n = 3:L
-            testPatt(n) = ...
-                Filter(trainPatt(n),testPatt(n-1),testPatt(n-2),...
-                a, b, c, d);
-        end
-        testPatt = pattScaling * testPatt + pattShift;
+       
+        testPattProto = trainPatt;
+%         testPatt = 0.5*(sin(2 * pi * (1:L) / 10) + ...
+%             sin(2 * pi * (1:L) / 3.41)); 
+     
+        testPatt = rand(1, ...
+            washoutLength + COinitLength + COadaptLength + learnLength);
+        
+%         for n = 3:L
+%             testPatt(n) = ...
+%                 Filter(testPatt(n),testPatt(n-1),testPatt(n-2),...
+%                 a, b, c, d);
+%         end
+%         testPatt = pattScaling * testPatt + pattShift;
+% 
+%         testPattProto = trainPatt; 
+%         testPatt = trainPatt;
+%         for n = 3:L
+%             testPatt(n) = ...
+%                 Filter(trainPatt(n),testPatt(n-1),testPatt(n-2),...
+%                 a, b, c, d);
+%         end
+%         testPatt = pattScaling * testPatt + pattShift;
     elseif dataType == 2
         trainPatt = rand(1, ...
             washoutLength + COinitLength + COadaptLength + learnLength);
@@ -151,8 +165,7 @@ if 0
     title('train pattern');
 end
 
-%% 2-module modeling
-%% Compute Conceptor
+%% 2-module modeling - Compute Conceptor
 zCollector = zeros(M, learnLength );
 z = zeros(M, 1);
 
