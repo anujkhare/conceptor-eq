@@ -66,7 +66,7 @@ end
 
 
 %%% plotting specs
-signalPlotLength = 40;
+signalPlotLength = 200;
 plotN = 8;
 maxLag = 49; % for autocorrelation plots
 
@@ -115,12 +115,13 @@ if newData
         d = baselineParams(4);
        
         testPattProto = trainPatt;
-%         testPatt = 0.5*(sin(2 * pi * (1:L) / 10) + ...
-%             sin(2 * pi * (1:L) / 3.41)); 
-     
-        testPatt = rand(1, ...
-            washoutLength + COinitLength + COadaptLength + learnLength);
-        
+
+%         testPatt = 0.5* ones(1, washoutLength + COinitLength + COadaptLength + learnLength);
+%         testPatt = rand(1, ...
+%             washoutLength + COinitLength + COadaptLength + learnLength);
+% 
+%         testPatt = 0.5*(sin(2 * pi * (1:L) / 14) + ...
+%             sin(2 * pi * (1:L) / 3.41));         
 %         for n = 3:L
 %             testPatt(n) = ...
 %                 Filter(testPatt(n),testPatt(n-1),testPatt(n-2),...
@@ -128,14 +129,14 @@ if newData
 %         end
 %         testPatt = pattScaling * testPatt + pattShift;
 % 
-%         testPattProto = trainPatt; 
-%         testPatt = trainPatt;
-%         for n = 3:L
-%             testPatt(n) = ...
-%                 Filter(trainPatt(n),testPatt(n-1),testPatt(n-2),...
-%                 a, b, c, d);
-%         end
-%         testPatt = pattScaling * testPatt + pattShift;
+        testPattProto = trainPatt; 
+        testPatt = trainPatt;
+        for n = 3:L
+            testPatt(n) = ...
+                Filter(trainPatt(n),testPatt(n-1),testPatt(n-2),...
+                a, b, c, d);
+        end
+        testPatt = pattScaling * testPatt + pattShift;
     elseif dataType == 2
         trainPatt = rand(1, ...
             washoutLength + COinitLength + COadaptLength + learnLength);
@@ -153,17 +154,6 @@ if newData
 end
 
 figNr = 0;
-
-if 0
-    figNr = figNr + 1;
-    figure(figNr); clf;
-    hold on;
-    plot((1:signalPlotLength) + (p-1)*signalPlotLength, ...
-        trainPatt(1,end - signalPlotLength + 1:end));
-    
-    hold off;
-    title('train pattern');
-end
 
 %% 2-module modeling - Compute Conceptor
 zCollector = zeros(M, learnLength );
