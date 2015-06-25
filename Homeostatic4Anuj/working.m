@@ -12,7 +12,7 @@
 %%%% than sqrt(MismatchRatios{nNet} = Rref{nNet} ./ Ezsqr{nNet}); although
 %%%% the latter would be more mathematically appealing
 
-function [energyErrs, autoCorrErrs] = working(no_plots, NNets)
+function [energyErrs, autoCorrErrs] = working(no_plots, NNets, delta)
 
 set(0,'DefaultFigureWindowStyle','docked');
 
@@ -24,13 +24,14 @@ newData = 1;
 NMultiplier = ones(1, NNets); % length of this gives Nr of nets
 % showNets = [1 length(NMultiplier)]; % which nets are to be diagnostic-plotted
 showNets = [1 2 NNets]; % which nets are to be diagnostic-plotted
-N = 200;  % network size
-M = 800;  % RF space size
-Nfb = 2; % number of feedbacks
+N = 50;  % network size
+M = 200;  % RF space size
 SR = 1 ;  % spectral radius
 WinScaling = .4 ;
-WfbScaling = 0. ;
+WfbScaling = 0.0 ;
 BiasScaling = 0. ;
+Nfb = 1; % number of feedbacks
+% delta = 1;    % The delay in output
 
 %%% learning controls
 washoutLength = 100;
@@ -107,8 +108,8 @@ end
 if newData
     L = washoutLength + COinitLength + COadaptLength + learnLength;
     if dataType == 1
-        trainPatt = 0.5*(sin(2 * pi * (1:L) / 8) + ...
-            sin(2 * pi * (1:L) / 5.03));
+        trainPatt = 0.5*(sin(2 * pi * (1:L) / 10) + ...
+            sin(2 * pi * (1:L) / 6.03));
         a = baselineParams(1);
         b = baselineParams(2);
         c = baselineParams(3);
@@ -120,7 +121,7 @@ if newData
 %         testPatt = rand(1, ...
 %             washoutLength + COinitLength + COadaptLength + learnLength);
 % 
-%         testPatt = 0.5*(sin(2 * pi * (1:L) / 14) + ...
+%         trainPatt = 0.5*(sin(2 * pi * (1:L) / 14) + ...
 %             sin(2 * pi * (1:L) / 3.41));         
 %         for n = 3:L
 %             testPatt(n) = ...
@@ -159,12 +160,11 @@ figNr = 0;
 zCollector = zeros(M, learnLength );
 z = zeros(M, 1);
 
-
-for n = Nfb+1:washoutLength + learnLength
+for n = 1:washoutLength + learnLength
     r = tanh(G * z + Win * trainPatt(1,n)...
-        + Wfb * trainPatt(1,n-Nfb:n-1)' + bias);
+        +  bias);
     z = F * r;
-    
+ 
     if n > washoutLength
         zCollector(:,n - washoutLength) = z;
     end
@@ -185,19 +185,19 @@ predCollector = zeros(1, learnLength);
 z = zeros(M,1);
 % Here we are doing the same thing, but restricting the dynamics using
 % learnt conceptor
-for n = Nfb+1:washoutLength + learnLength
+for n = Nfb+1+delta:washoutLength + learnLength
     
     r = tanh(G * z + Win * trainPatt(1,n)...
-        + Wfb * trainPatt(1,n-Nfb:n-1)' + bias);
+        + Wfb * trainPatt(1,n-Nfb-delta:n-delta-1)' + bias);
     z = C{nNet} .* (F * r);
     
     if n > washoutLength
         zCollector(:,n - washoutLength) = z;
         
         pCollector(:, n - washoutLength) = ...
-            trainPatt(1,n-Nfb+1:n)';
+            trainPatt(1,n-Nfb+1-delta:n-delta)';
         predCollector(1, n - washoutLength) = ...
-            trainPatt(1,n+1);
+            trainPatt(1,n+1-delta);
         
     end
 end
@@ -234,7 +234,9 @@ for n = 1:washoutLength             % just the WASHOUT period
             Win * yAll{nNet-1}(end,1) + ...
             Wfb * yAll{nNet} + bias);
         zs{nNet} = C{nNet} .* (F * rs{nNet});
-        yAll{nNet} = WoutAll * zs{nNet};
+        yAll{nNet} = WoutAll * zs{nNet}; % NOTE THAT yAll now represents
+                                         % the filtered training data at time
+                                         % n-delta.
     end
 end
 % Initialize the average (expected) signal energy vector E[z.^2], called
@@ -305,7 +307,7 @@ for n = 1:COadaptLength
         Ezsqr{nNet} = (1-LRR) * Ezsqr{nNet} + LRR * zs{nNet}.^2;
         MismatchRatios{nNet} = (Rref ./ Ezsqr{nNet}).^mismatchExp;
     end
-    
+
     y_co_adapt(1, n) = yAll{3}(end, 1);
 end
 
@@ -319,6 +321,7 @@ hold off;
 
 %% Finally, stop adapting, stay in the last adapted configuaration
 % and collect data for plotting and error diagnostics
+k = 0;
 shift = washoutLength + COinitLength + COadaptLength;
 for n = 1:testLength
     u = testPatt(1,n+shift);
@@ -337,9 +340,18 @@ for n = 1:testLength
         yCollectortest{nNet}(:,n) = yAll{nNet}(end,1);
     end
     
+%     if k < 5
+%         disp(mean(zs{1}));
+%         disp(mean(zs{2}));
+%         disp(mean(zs{3}));
+%         disp(mean(zs{4}));
+%         disp(mean(zs{5}));
+%         disp(yAll);
+%     end
+    k = k+1;
     pCollectortest(:,n) = ...
-        testPattProto(1,n + shift);
-    uCollectortest(:,n) = u;
+        testPattProto(1,n - 5 * delta + shift);
+    uCollectortest(:,n) = testPatt(1, n + shift - delta);
 end
 
 % Calculate errors
@@ -374,6 +386,7 @@ for nNet = 1:NNets
 end
 
 disp('***************************');
+fprintf('Delta: %d\n', delta);
 fprintf('raw NRMSE = %0.3g\n',  rawNRMSE);
 fprintf('meanabs Wout = %0.3g\n',  mean(abs(Wout)));
 fprintf('train NRMSEs = %0.3g\n', ytrainNRMSE);

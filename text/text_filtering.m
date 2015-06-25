@@ -13,7 +13,7 @@
 %%%% than sqrt(MismatchRatios{nNet} = Rref{nNet} ./ Ezsqr{nNet}); although
 %%%% the latter would be more mathematically appealing
 
-function [energyErrs, autoCorrErrs] = text_filtering(NNets, no_plots)
+function [energyErrs, autoCorrErrs] = text_filtering(NNets, no_plots, delta)
 
 set(0,'DefaultFigureWindowStyle','docked');
 
@@ -21,7 +21,7 @@ set(0,'DefaultFigureWindowStyle','docked');
 randstate = 1; newNets = 1; newSystemScalings = 1;
 newData = 1;
 
-InSize=12;
+InSize=12
 
 %%% System parameters
 NMultiplier = ones(1, NNets); % length of this gives Nr of nets
@@ -29,7 +29,7 @@ NMultiplier = ones(1, NNets); % length of this gives Nr of nets
 showNets = [1 2 NNets]; % which nets are to be diagnostic-plotted
 N = 50;  % network size
 M = 200;  % RF space size
-Nfb = 2; % number of feedbacks
+Nfb = 3; % number of feedbacks
 SR = 1 ;  % spectral radius
 WinScaling = .4 ;
 WfbScaling = 0. ;
@@ -46,7 +46,7 @@ LRR = 0.005; % leaking rate for R estimation
 % set aperture1 = Inf if no conceptors are to be inserted
 apertures = Inf * NMultiplier;
 
-mismatchExp = 0; % a value of 1/2 would be mathematically indicated
+mismatchExp = 1; % a value of 1/2 would be mathematically indicated
 % larger, over-compensating values work better
 
 %%% plotting specs
@@ -62,7 +62,7 @@ rand('twister', randstate);
 if newNets
     NNets = length(NMultiplier);
     WinRaw = randn(N, InSize);
-%     WfbRaw = randn(N, Nfb);
+    WfbRaw = randn(Nfb, N, InSize);
     biasRaw = randn(N, 1);
     FRaw = randn(M,N);
     FRawRowNorms = sqrt(sum(FRaw.^2, 2));
@@ -79,39 +79,43 @@ if newSystemScalings
         F = FstarRaw;
         G = GstarRaw * SR;
         Win = WinScaling * WinRaw;
-%         Wfb = WfbScaling * WfbRaw;
+        Wfb = WfbScaling * WfbRaw;
         bias = BiasScaling * biasRaw;
 end
 
-train_image = 'images/ab_rand.png';
-test_image = 'images/ab_rand1.png';
-
+train_image = 'images/abNoRand152.png';
+test_image = 'images/abItRand.png';
+testProto_image = 'images/abNoRand.png';
 % Load training and testing images
 L = washoutLength + COinitLength + COadaptLength + learnLength + testLength + signalPlotLength;
 train_image = rgb2gray(imread(train_image));
 test_image = rgb2gray(imread(test_image));
-% test_image = train_image;
+testProto_image = rgb2gray(imread(testProto_image));
+
 trainPatt = im2double (train_image(:, 1:L));
 testPatt = im2double (test_image(:, 1:L));
-testPattProto = trainPatt;
-% imshow(testPatt);
+testPattProto = im2double (testProto_image(:, 1:L));
 
 figNr = 0;
 
 %% 2-module modeling - Compute Conceptor
 zCollector = zeros(M, learnLength );
 z = zeros(M, 1);
-
-
-for n = Nfb+1:washoutLength + learnLength
-    r = tanh(G * z + Win * trainPatt(:,n) + bias);%...
-%         + Wfb * trainPatt(:,n-Nfb:n-1)');
+k=0;
+for n = Nfb+1+delta:washoutLength + learnLength
+    fb = 0.0;
+    for i = 1 : Nfb
+        fb = fb + reshape(Wfb(i, :, :), [N, InSize]) ...
+             * trainPatt(:, n-Nfb+i-1);
+    end
+    r = tanh(G * z + Win * trainPatt(:,n) + bias + fb);
     z = F * r;
-    
+    if k < 10
+        disp(z);
+    end
     if n > washoutLength
         zCollector(:,n - washoutLength) = z;
     end
-    
 end
 
 R = diag(zCollector * zCollector') / learnLength;
@@ -120,7 +124,7 @@ C{1} = R ./ (R + apertures(1)^(-2));
 for nNet = 2:NNets
     C{nNet} = C{1};
 end
-disp(R);
+% disp(R);
 %% Learn Rref,  Wout, and collect r state plot data
 zCollector = zeros(M, learnLength );
 % pCollector = zeros(Nfb, learnLength);
@@ -129,14 +133,17 @@ z = zeros(M,1);
 % Here we are doing the same thing, but restricting the dynamics using
 % learnt conceptor
 for n = Nfb+1:washoutLength + learnLength
-    
-    r = tanh(G * z + Win * trainPatt(:,n)...
-        + bias);
+    fb = 0.0;
+    for i = 1 : Nfb
+        fb = fb + reshape(Wfb(i, :, :), [N, InSize]) ...
+             * trainPatt(:, n-Nfb+i-1);
+    end
+    r = tanh(G * z + Win * trainPatt(:,n) + fb + bias);
     z = C{nNet} .* (F * r);
-    0
+
     if n > washoutLength
         zCollector(:,n - washoutLength) = z;
-        pCollector(:, n - washoutLength) = trainPatt(:,n);
+        pCollector(:, n - washoutLength) = trainPatt(:,n-delta);
     end
 end
 
@@ -148,7 +155,7 @@ WoutAll = (pinv(args * args' / learnLength + ...
     TychWouts(nNet) * eye(M)) * args * targs' / learnLength)' ;     % why??
 
 ytrainNRMSE = nrmse(WoutAll * args, targs);
-disp(ytrainNRMSE);
+% disp(ytrainNRMSE);
 
 %% Testing
 for nNet = 1:NNets
@@ -161,7 +168,7 @@ uCollectortest = zeros(InSize, testLength);
 for nNet = 1:NNets
     rs{nNet} = zeros(N,1);
     zs{nNet} = zeros(M,1);
-    yAll{nNet} = zeros(InSize,1);
+    yAll{nNet} = zeros(Nfb, InSize);
 end
 for n = 1:washoutLength             % just the WASHOUT period
     rs{1} = tanh(G * zs{1} + Win * testPatt(:,n) + bias);
@@ -269,30 +276,40 @@ for n = 1:testLength
     uCollectortest(:,n) = u;
 end
 
-subplot(3,1,1);
-imshow(mat2gray(pCollectortest));
+figure();
+imshow(mat2gray(pCollectortest(1:12, 1:100)));
 axis('on');
-subplot(3,1,2);
-imshow(imadjust(mat2gray(yCollectortest{NNets})));
+figure();
+imshow(imadjust(mat2gray(yCollectortest{NNets}(1:12, 1:100))));
 axis('on');
-subplot(3,1,3);
-imshow(mat2gray(uCollectortest));
+figure();
+imshow(mat2gray(uCollectortest(1:12, 1:100)));
 axis('on');
-return
+
+% figure();
+% imshow(mat2gray(pCollectortest));
+% axis('on');
+% figure();
+% imshow(imadjust(mat2gray(yCollectortest{NNets})));
+% axis('on');
+% figure();
+% imshow(mat2gray(uCollectortest));
+% axis('on');
+
 %% Calculate errors
 for nNet = 1:NNets
-    ytestNRMSE{nNet} = nrmse(yCollectortest{nNet}, ...
-        pCollectortest);
+    ytestNRMSE{nNet} = (nrmse(yCollectortest{nNet}, ...
+        pCollectortest));
     EngyRatios{nNet} = Rref ./ Ezsqr{nNet};
 end
 
 rawNRMSE = nrmse(testPattProto, testPatt);  %% why? what??
 
 
-autoCorrP = autocorr(pCollectortest, maxLag);
-for nNet = 1:NNets
-    autoCorry{nNet} = autocorr(yCollectortest{nNet}, maxLag);
-end
+% autoCorrP = autocorr(pCollectortest, maxLag);
+% for nNet = 1:NNets
+%     autoCorry{nNet} = autocorr(yCollectortest{nNet}, maxLag);
+% end
 
 energyErrs = zeros(1,NNets);
 for nNet = 1:NNets
@@ -303,18 +320,19 @@ end
 testNRMSEs = zeros(InSize,NNets);
 autoCorrErrs = zeros(InSize,NNets);
 for nNet = 1:NNets
-    testNRMSEs(nNet) = ytestNRMSE{nNet};
-    autoCorrErrs(nNet) = ...
-        norm((autoCorrP - autoCorry{nNet}) / norm(autoCorrP) )^2 ;
+    testNRMSEs(:, nNet) = ytestNRMSE{nNet};
+%     autoCorrErrs(nNet) = ...
+%         norm((autoCorrP - autoCorry{nNet}) / norm(autoCorrP) )^2 ;
 end
 
 disp('***************************');
-fprintf('raw NRMSE = %0.3g\n',  rawNRMSE);
-fprintf('meanabs Wout = %0.3g\n',  mean(abs(Wout)));
-fprintf('train NRMSEs = %0.3g\n', ytrainNRMSE);
-disp(['test  NRMSEs = ' num2str(testNRMSEs, ' %0.3g')]);
+fprintf('raw NRMSE = %0.3g\n',  mean(rawNRMSE));
+fprintf('meanabs Wout = %0.3g\n',  mean(mean(abs(WoutAll))));
+fprintf('train NRMSEs = %0.3g\n', mean(ytrainNRMSE));
+disp(['test  NRMSEs = ' num2str(mean(testNRMSEs, 1), ' %0.3g')]);
 disp(['energyErrs = ' num2str(energyErrs, ' %0.3g')]);
-disp(['autoCorrErrs = ' num2str(autoCorrErrs, ' %0.3g')]);
+% disp(['autoCorrErrs = ' num2str(autoCorrErrs, ' %0.3g')]);
+return
 
 %% Plots
 
