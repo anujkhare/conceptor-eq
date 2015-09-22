@@ -1,0 +1,207 @@
+diff --git a/text/generate_text_cairo.ipynb b/text/generate_text_cairo.ipynb
+index 8d4fa7b..1b94fb7 100644
+--- a/text/generate_text_cairo.ipynb
++++ b/text/generate_text_cairo.ipynb
+@@ -1,7 +1,7 @@
+ {
+  "metadata": {
+   "name": "",
+-  "signature": "sha256:40b35a50daaa0a0d262204dc837530a81bcad5d66dc6bd984d495a89cbb7fad6"
++  "signature": "sha256:9d9eed54fc7a9a2e4c167436f5b15631c46611064bc9b381c9481445f205b321"
+  },
+  "nbformat": 3,
+  "nbformat_minor": 0,
+@@ -9,109 +9,6 @@
+   {
+    "cells": [
+     {
+-     "cell_type": "markdown",
+-     "metadata": {},
+-     "source": [
+-      "###TODO\n",
+-      "- Figure out a way around the temp surface\n",
+-      "- figure out a way to get matrix directly from surface! .\n",
+-      "\n",
+-      "The font sizes vary according to the font style/properties, so as to occupy as much spce as possible for a given y-size of the surface."
+-     ]
+-    },
+-    {
+-     "cell_type": "markdown",
+-     "metadata": {},
+-     "source": [
+-      "%load_ext vimception"
+-     ]
+-    },
+-    {
+-     "cell_type": "markdown",
+-     "metadata": {},
+-     "source": [
+-      "%load_ext autoreload\n",
+-      "%autoreload 2"
+-     ]
+-    },
+-    {
+-     "cell_type": "markdown",
+-     "metadata": {},
+-     "source": [
+-      "%load_ext runtools"
+-     ]
+-    },
+-    {
+-     "cell_type": "code",
+-     "collapsed": false,
+-     "input": [
+-      "import cairo\n",
+-      "import numpy as np\n",
+-      "from scipy import misc\n",
+-      "#%pylab inline\n",
+-      "from skimage import transform as tf\n",
+-      "from IPython.html.widgets import interact\n",
+-      "from skimage import io\n",
+-      "from math import *\n",
+-      "import matplotlib.pyplot as py\n",
+-      "import os"
+-     ],
+-     "language": "python",
+-     "metadata": {},
+-     "outputs": [],
+-     "prompt_number": 157
+-    },
+-    {
+-     "cell_type": "code",
+-     "collapsed": false,
+-     "input": [
+-      "# Get the font names in the system\n",
+-      "# File generated using pangocairo\n",
+-      "f = open('fonts', 'r')\n",
+-      "font_list =[]\n",
+-      "for line in f:\n",
+-      "    txt = line.strip()\n",
+-      "    font_list = font_list + [txt]\n",
+-      "len(font_list)"
+-     ],
+-     "language": "python",
+-     "metadata": {},
+-     "outputs": [
+-      {
+-       "metadata": {},
+-       "output_type": "pyout",
+-       "prompt_number": 158,
+-       "text": [
+-        "153"
+-       ]
+-      }
+-     ],
+-     "prompt_number": 158
+-    },
+-    {
+-     "cell_type": "code",
+-     "collapsed": false,
+-     "input": [
+-      "if os.path.isdir('images') is False:\n",
+-      "    print 'Created dir \"Images\"'\n",
+-      "    os.system('mkdir Images')\n",
+-      "else:\n",
+-      "    print '\"Images\" already exists'    "
+-     ],
+-     "language": "python",
+-     "metadata": {},
+-     "outputs": [
+-      {
+-       "output_type": "stream",
+-       "stream": "stdout",
+-       "text": [
+-        "\"Images\" already exists\n"
+-       ]
+-      }
+-     ],
+-     "prompt_number": 159
+-    },
+-    {
+      "cell_type": "code",
+      "collapsed": false,
+      "input": [
+@@ -124,7 +21,7 @@
+      "language": "python",
+      "metadata": {},
+      "outputs": [],
+-     "prompt_number": 160
++     "prompt_number": 5
+     },
+     {
+      "cell_type": "markdown",
+@@ -216,8 +113,8 @@
+       "    if arg.force_new == True or os.path.isfile(arg.file_name) == False:\n",
+       "            print \"Generating new image: \" + arg.file_name\n",
+       "            export_text_png(arg)\n",
+-      "    else:\n",
+-      "        print \"Using existing image: \" + arg.file_name\n",
++      "#     else:\n",
++      "#         print \"Using existing image: \" + arg.file_name\n",
+       "    \n",
+       "    im = io.imread(arg.file_name)[:, :, 1]\n",
+       "    return im\n",
+@@ -226,6 +123,7 @@
+       "    im = get_matrix(arg)\n",
+       "    py.imshow(im, cmap=py.cm.Greys_r)\n",
+       "    py.axis('off')\n",
++      "    return im\n",
+       "    \n",
+       "# Generate A-Z and a-z\n",
+       "def plot_char_set(arg=TextDescription()):\n",
+@@ -242,12 +140,52 @@
+       "    py.subplots(16, 10, figsize=(28,28))\n",
+       "    for i, font in enumerate(font_list):\n",
+       "        py.subplot(16,10,i+1)\n",
+-      "        display_text(TextDescription(text=text, font_family=font))"
++      "        display_text(TextDescription(text=text, font_family=font, force_new=False))"
+      ],
+      "language": "python",
+      "metadata": {},
+-     "outputs": [],
+-     "prompt_number": 214
++     "outputs": [
++      {
++       "ename": "NameError",
++       "evalue": "name 'font_list' is not defined",
++       "output_type": "pyerr",
++       "traceback": [
++        "\u001b[1;31m---------------------------------------------------------------------------\u001b[0m\n\u001b[1;31mNameError\u001b[0m                                 Traceback (most recent call last)",
++        "\u001b[1;32m<ipython-input-6-72bf5ef56116>\u001b[0m in \u001b[0;36m<module>\u001b[1;34m()\u001b[0m\n\u001b[0;32m      1\u001b[0m \u001b[1;31m# size_x is not used unless explicitly defined in the parameters, and the surface just fits in the x direction.\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m----> 2\u001b[1;33m \u001b[1;32mclass\u001b[0m \u001b[0mTextDescription\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m      3\u001b[0m     def __init__(self, text = 'A', size_x = None, size_y = 12, x_pad = 4, y_pad =4,\n\u001b[0;32m      4\u001b[0m                  \u001b[0mreps\u001b[0m \u001b[1;33m=\u001b[0m \u001b[1;36m1\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mfont_family\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mfont_list\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;36m152\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mitalic\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mFalse\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mbold\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mFalse\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m      5\u001b[0m                  file_name = None, force_new = True, rand=False, verbose=False):\n",
++        "\u001b[1;32m<ipython-input-6-72bf5ef56116>\u001b[0m in \u001b[0;36mTextDescription\u001b[1;34m()\u001b[0m\n\u001b[0;32m      2\u001b[0m \u001b[1;32mclass\u001b[0m \u001b[0mTextDescription\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m      3\u001b[0m     def __init__(self, text = 'A', size_x = None, size_y = 12, x_pad = 4, y_pad =4,\n\u001b[1;32m----> 4\u001b[1;33m                  \u001b[0mreps\u001b[0m \u001b[1;33m=\u001b[0m \u001b[1;36m1\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mfont_family\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mfont_list\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;36m152\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mitalic\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mFalse\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mbold\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mFalse\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m      5\u001b[0m                  file_name = None, force_new = True, rand=False, verbose=False):\n\u001b[0;32m      6\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
++        "\u001b[1;31mNameError\u001b[0m: name 'font_list' is not defined"
++       ]
++      }
++     ],
++     "prompt_number": 6
++    },
++    {
++     "cell_type": "markdown",
++     "metadata": {},
++     "source": [
++      "if __name__ == \"__main__\":\n",
++      "    print \"hello\"\n",
++      "#     %pylab inline\n",
++      "\n",
++      "plot_all_fonts()"
++     ]
++    },
++    {
++     "cell_type": "markdown",
++     "metadata": {},
++     "source": [
++      "display_text(TextDescription(\"abc\", size_y=30, font_family=font_list[1]))"
++     ]
++    },
++    {
++     "cell_type": "markdown",
++     "metadata": {},
++     "source": [
++      "mat = get_matrix(TextDescription(\"abc\", reps=15, size_y=30, font_family=font_list[1]))\n",
++      "afine_tf = tf.AffineTransform(shear=0.3)\n",
++      "modifiedImage = tf.warp(mat, afine_tf) * 255      # Apply affine transform to image\n",
++      "io.imshow(modifiedImage, cmap=cm.Greys_r)"
++     ]
+     }
+    ],
+    "metadata": {}

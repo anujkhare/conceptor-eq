@@ -1,0 +1,32 @@
+
+###TODO
+- Figure out a way around the temp surface
+- figure out a way to get matrix directly from surface! .
+
+The font sizes vary according to the font style/properties, so as to occupy as much spce as possible for a given y-size of the surface."
+
+import cairo
+import numpy as np
+from scipy import misc
+#%pylab inline
+from skimage import transform as tf
+from IPython.html.widgets import interact
+from skimage import io
+from math import *
+import matplotlib.pyplot as py
+import os"
+
+if os.path.isdir('images') is False:
+    print 'Created dir "Images"'
+    os.system('mkdir Images')
+else:
+    print '"Images" already exists'
+
+# Get the font names in the system
+# File generated using pangocairo
+f = open('fonts', 'r')
+font_list =[]
+for line in f:
+    txt = line.strip()
+    font_list = font_list + [txt]
+len(font_list)

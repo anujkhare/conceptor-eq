@@ -1,0 +1,16 @@
+NNets = 5:6;
+lrr = 0.05;
+no_plots = 1;
+
+enrgyErrs = zeros(1, length(NNets));
+autoCorrErrs = zeros(1, length(NNets));
+
+for i = NNets
+   [enrgyErrs, autoCorrErrs] = combined_z(i, lrr, no_plots);
+end
+
+figure();
+hold on;
+plot(NNets, enrgyErrs, 'rx');
+plot(NNets, autoCorrErrs, 'gx');
+hold off;
